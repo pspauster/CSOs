@@ -1,0 +1,81 @@
+---
+title: "analysis"
+author: "Patrick Spauster"
+date: "7/18/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(leaflet)
+```
+
+```{r}
+
+advisories_clean <- readRDS("combined_advisories_waterbodies.rds") 
+
+advisories_sf <- advisories_clean %>% 
+  st_as_sf(coords = c("long_2", "lat_2")) %>% 
+  filter(date >= date("2019-05-01"))
+
+advisories_latest <- advisories_clean %>% 
+  filter(date >= date("2019-05-01"))
+
+```
+
+```{r}
+
+advisories_by_month <- advisories_latest %>% 
+  mutate(month = floor_date(date, unit="month")) %>% 
+  group_by(month) %>% 
+  summarize(alerts = n())
+
+advisories_by_month %>% 
+  ggplot()+
+  geom_line(mapping = aes(x = month, y = alerts))
+
+```
+seasonal
+```{r}
+
+advisories_latest %>% 
+  mutate(month = month(date),
+         year = year(date)) %>% 
+  group_by(year, month) %>% 
+  summarize(alerts = n()) %>% 
+  ggplot()+
+  geom_line(mapping = aes(x = month, y = alerts, color = as.factor(year)))
+
+
+```
+
+worst polluted
+```{r}
+
+top_outflows <- advisories_sf %>% 
+  group_by(name, wbid) %>% 
+  summarize(alerts = n())
+
+mapviewOptions(default = TRUE)
+
+pal <- colorNumeric(
+  palette = "Reds",
+  domain = top_outflows$alerts)
+
+leaflet(top_outflows) %>% 
+  addProviderTiles(provider = "CartoDB.Positron") %>% 
+  addCircleMarkers( radius = 2,
+                       color = ~pal(alerts),
+                       opacity = 0.5,
+                       ) %>% 
+  addLegend("bottomright", pal = pal, values = ~alerts,
+    title = "Alerts since May 2019",
+    opacity = 1
+  )
+```
+
+
+
