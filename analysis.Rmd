@@ -78,4 +78,31 @@ leaflet(top_outflows) %>%
 ```
 
 
+```{r}
+csos_names <- names(read_csv("CSOs_2019.xlsx - DEC_CSO_2016.csv"))
+csos_historical_osa <- read_csv("CSOs_2019.xlsx - DEC_CSO_2016.csv", skip = 5)
+
+names(csos_historical_osa) <- csos_names
+
+csos_long <- csos_historical_osa %>%
+  pivot_longer(cols = starts_with(c("events", "volume")),
+               names_to = c(".value", "year"),
+               names_pattern = "(\\D+)(\\d+)")
+```
+
+```{r}
+
+csos_by_year <- csos_long %>% 
+  group_by(year) %>% 
+  summarize(events = sum(events),
+            volume = sum(volume))
+
+csos_by_year %>% 
+  ggplot()+
+  geom_line(mapping = aes(x = as.double(year), y=events))
+
+csos_by_year %>% 
+  ggplot()+
+  geom_line(mapping = aes(x = as.double(year), y = volume))
+```
 
